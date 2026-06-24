@@ -1,13 +1,13 @@
 services:
-  cpp-builder:
+  cpp-backend:
     build:
       context: ./weather_app
       dockerfile: Dockerfile
     container_name: cpp_weather_backend
     volumes:
-      - bin-share:/app_bin
+      - bin-share-volume:/app_bin
 
-  fastapi-service:
+  fastapi-gateway:
     build:
       context: ./fastapi_app
       dockerfile: Dockerfile
@@ -15,9 +15,20 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - bin-share:/app_bin
+      - bin-share-volume:/app_bin
     depends_on:
-      - cpp-builder
+      - cpp-backend
+      
+  nginx-server:
+    image: nginx:alpine
+    container_name: nginx_weather_webserver
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+    depends_on:
+      - fastapi-gateway
 
 volumes:
-  bin-share:
+  bin-share-volume:

@@ -1,37 +1,35 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 import asyncio
 import json
 import os
 
-app = FastAPI(title="Weather API Gateway")
+app = FastAPI(title="Weather API Gateway Behind Nginx")
 
-# Path to the C++ binary shared via a volume or copied
 BINARY_PATH = "/app_bin/weather_app"
 
 @app.get("/weather")
-async def get_weather(lat: float = 48.11, lon: float = -1.67):
+async def get_weather(
+    lat: float = Query(48.8566),
+    lon: float = Query(2.3522)
+):
     if not os.path.exists(BINARY_PATH):
-        raise HTTPException(status_code=500, detail="C++ binary not found")
+        raise HTTPException(status_code=500, detail="Moteur C++ indisponible.")
 
-    # Asynchronously run the C++ binary with GPS coordinates
-    proc = await asyncio.create_subprocess_exec(
+    process = await asyncio.create_subprocess_exec(
         BINARY_PATH, str(lat), str(lon),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
+    stdout, stderr = await process.communicate()
 
-    stdout, stderr = await proc.communicate()
-
-    if proc.returncode != 0:
-        raise HTTPException(status_code=500, detail=f"C++ application error: {stderr.decode()}")
+    if process.returncode != 0:
+        raise HTTPException(status_code=500, detail="Échec moteur C++")
 
     try:
-        # Load the JSON returned by the C++ binary to return it cleanly
-        weather_data = json.loads(stdout.decode().strip())
+        weather_json = json.loads(stdout.decode().strip())
         return {
-            "status": "success",
-            "location": {"latitude": lat, "longitude": lon},
-            "current_weather": weather_data
+            "speech": "Données actualisées depuis le moteur C++ natif.",
+            "current_weather": weather_json
         }
     except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Error parsing C++ output data")
+        raise HTTPException(status_code=500, detail="Erreur parsing JSON")
