@@ -1,0 +1,8 @@
+services:
+  weather-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weather_app_container
+    # Optionnel : si vous souhaitez qu'il tourne en boucle, sinon il s'arrête après l'affichage
+    restart: unless-stopped
