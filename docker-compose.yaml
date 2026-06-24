@@ -1,7 +1,23 @@
 services:
-  weather-service:
+  cpp-builder:
     build:
-      context: .
+      context: ./weather_app
       dockerfile: Dockerfile
-    container_name: weather_app_container
-    restart: unless-stopped
+    container_name: cpp_weather_backend
+    volumes:
+      - bin-share:/app_bin
+
+  fastapi-service:
+    build:
+      context: ./fastapi_app
+      dockerfile: Dockerfile
+    container_name: fastapi_weather_gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - bin-share:/app_bin
+    depends_on:
+      - cpp-builder
+
+volumes:
+  bin-share:
