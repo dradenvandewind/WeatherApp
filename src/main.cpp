@@ -30,7 +30,7 @@ int main() {
         curl_easy_cleanup(curl);
 
         if(res != CURLE_OK) {
-            std::cerr << "Erreur curl_easy_perform() échoué: " << curl_easy_strerror(res) << std::endl;
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
             return 1;
         }
 
@@ -41,12 +41,12 @@ int main() {
             double temperature = j["current_weather"]["temperature"];
             double windspeed = j["current_weather"]["windspeed"];
             
-            std::cout << "=== Météo en temps réel (Rennes) ===" << std::endl;
-            std::cout << "Température : " << temperature << "°C" << std::endl;
-            std::cout << "Vitesse du vent : " << windspeed << " km/h" << std::endl;
+            std::cout << "=== Real-time weather (Rennes) ===" << std::endl;
+            std::cout << "Temperature: " << temperature << "°C" << std::endl;
+            std::cout << "Wind speed: " << windspeed << " km/h" << std::endl;
         } 
         catch (json::exception& e) {
-            std::cerr << "Erreur de parsing JSON : " << e.what() << std::endl;
+            std::cerr << "JSON parsing error: " << e.what() << std::endl;
             return 1;
         }
     }
