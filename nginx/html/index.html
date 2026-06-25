@@ -1,75 +1,429 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C++ & FastAPI Weather App</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
-        h1 { margin-top: 0; color: #2c3e50; }
-        .geo-inputs { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; text-align: center; }
-        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        button:hover { background: #2980b9; }
-        .weather-info { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; display: none; }
-        .temp { font-size: 3rem; font-weight: bold; color: #e74c3c; margin: 10px 0; }
-        .speech { font-style: italic; color: #7f8c8d; margin-bottom: 15px; }
-        .update-tag { font-size: 0.8rem; color: #bdc3c7; margin-top: 15px; }
-    </style>
-</head>
-<body>
 
-<div class="card">
-    <h1>Dynamic Weather</h1>
-    <div class="geo-inputs">
-        <input type="number" id="lat" step="0.0001" value="48.8566" placeholder="Latitude">
-        <input type="number" id="lon" step="0.0001" value="2.3522" placeholder="Longitude">
-    </div>
-    <button onclick="fetchWeather()">Get weather</button>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.shell {
+  max-width: 420px;
+  margin: 1rem auto;
+  border-radius: 20px;
+  border: 0.5px solid var(--color-border-tertiary);
+  overflow: hidden;
+  background: var(--color-background-primary);
+}
+.sky {
+  padding: 1.75rem 1.5rem 1.5rem;
+  background: #0d1b38;
+  position: relative;
+  overflow: hidden;
+}
+.sky-stars {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.sky-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
+}
+.sky-loc {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sky-loc i { font-size: 13px; }
+.sky-condition {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  text-align: right;
+}
+.sky-center {
+  position: relative;
+  z-index: 2;
+  margin: 1.25rem 0 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+.big-temp {
+  font-size: 72px;
+  font-weight: 300;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -3px;
+}
+.sky-right {
+  padding-bottom: 6px;
+}
+.speech-txt {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-style: italic;
+  line-height: 1.5;
+  max-width: 180px;
+}
+.body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.coords-row { display: flex; gap: 8px; }
+.coord-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.coord-wrap label { font-size: 11px; color: var(--color-text-secondary); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.coord-wrap input { width: 100%; text-align: center; font-size: 14px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); border-radius: 8px; padding: 9px 8px; outline: none; }
+.coord-wrap input:focus { border-color: var(--color-border-primary); }
+.fetch-btn { width: 100%; padding: 11px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s, transform 0.1s; }
+.fetch-btn:hover { background: var(--color-background-secondary); }
+.fetch-btn:active { transform: scale(0.98); }
+.wind-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.rose-wrap {
+  flex-shrink: 0;
+  width: 130px;
+  height: 130px;
+  position: relative;
+}
+.wind-stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wstat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wstat-label { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+.wstat-val { font-size: 22px; font-weight: 500; color: var(--color-text-primary); line-height: 1; }
+.wstat-unit { font-size: 13px; color: var(--color-text-secondary); font-weight: 400; }
+.bar-wrap { height: 4px; background: var(--color-background-secondary); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.bar-fill { height: 100%; border-radius: 2px; background: #378ADD; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+.update-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-tertiary); }
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: #3aab6d; animation: blink 2s infinite; flex-shrink: 0; }
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.65)} }
+.load-ring {
+  display: none;
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,.15);
+  border-top-color: rgba(255,255,255,.7);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading .load-ring { display: block; }
+.loading .ti-refresh { display: none; }
+</style>
 
-    <div id="weather-info" class="weather-info">
-        <div id="speech" class="speech"></div>
-        <div id="temp" class="temp">--°C</div>
-        <div id="wind">Wind: -- km/h</div>
-        <div id="update-time" class="update-tag">Last update: --</div>
+<h2 class="sr-only">Weather Application </h2>
+<meta charset="UTF-8">
+<div class="shell" id="shell">
+  <div class="sky" id="sky">
+    <canvas class="sky-stars" id="starsCanvas" width="420" height="220"></canvas>
+    <div class="sky-top-row">
+      <div class="sky-loc">
+        <i class="ti ti-map-pin" aria-hidden="true"></i>
+        <span id="locLabel">Paris, FR</span>
+      </div>
+      <div class="sky-condition" id="condLabel">—</div>
     </div>
+    <div class="sky-center">
+      <div class="big-temp" id="bigTemp">—°</div>
+      <div class="sky-right">
+        <div class="speech-txt" id="speechTxt">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="coords-row">
+      <div class="coord-wrap">
+        <label>Latitude</label>
+        <input type="number" id="lat" step="0.0001" value="48.8566">
+      </div>
+      <div class="coord-wrap">
+        <label>Longitude</label>
+        <input type="number" id="lon" step="0.0001" value="2.3522">
+      </div>
+    </div>
+
+    <button class="fetch-btn" id="fetchBtn" onclick="fetchWeather()">
+      <div class="load-ring" id="loadRing"></div>
+      <i class="ti ti-refresh" id="refreshIcon" aria-hidden="true"></i>
+      Refresh
+    </button>
+
+    <div class="wind-section" id="windSection" style="display:none">
+      <div class="rose-wrap">
+        <canvas id="roseCanvas" width="130" height="130"></canvas>
+      </div>
+      <div class="wind-stats">
+        <div class="wstat">
+          <span class="wstat-label">Speed</span>
+          <span class="wstat-val"><span id="wSpeed">—</span> <span class="wstat-unit">km/h</span></span>
+          <div class="bar-wrap"><div class="bar-fill" id="speedBar" style="width:0%"></div></div>
+        </div>
+        <div class="wstat">
+          <span class="wstat-label">Direction</span>
+          <span class="wstat-val"><span id="wDir">—</span><span class="wstat-unit"> </span></span>
+        </div>
+        <div class="wstat">
+          <span class="wstat-label">Cardinal Direction</span>
+          <span class="wstat-val" id="wCardinal" style="font-size:15px; margin-top:2px">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="update-row" id="updateRow" style="display:none">
+      <span class="pulse"></span>
+      <span id="updateTime">—</span>
+    </div>
+  </div>
 </div>
 
 <script>
-    let autoUpdateInterval = null;
+let autoInterval = null;
+let currentDir = 0;
+let animFrame = null;
+let isDark = false;
 
-    async function fetchWeather() {
-        const lat = document.getElementById('lat').value;
-        const lon = document.getElementById('lon').value;
-        const infoDiv = document.getElementById('weather-info');
+function detectDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
 
-        try {
-            // Call '/api/weather' because Nginx reverse proxies to FastAPI
-            const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
-            if (!response.ok) throw new Error('Server error');
-            
-            const data = await response.json();
-            
-            document.getElementById('speech').innerText = data.speech;
-            document.getElementById('temp').innerText = `${data.current_weather.temperature}°C`;
-            document.getElementById('wind').innerText = `Wind: ${data.current_weather.windspeed} km/h (Dir: ${data.current_weather.winddirection}°)`;
-            document.getElementById('update-time').innerText = `Updated at: ${new Date().toLocaleTimeString()}`;
-            
-            infoDiv.style.display = 'block';
-        } catch (error) {
-            alert("Unable to retrieve weather data.");
-            console.error(error);
-        }
-    }
+function drawStars(canvas) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const count = 55;
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height;
+    const r = Math.random() * 1.2 + 0.3;
+    const a = Math.random() * 0.6 + 0.15;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.fill();
+  }
+}
 
-    // Load initial weather on startup
-    window.onload = () => {
-        fetchWeather();
-        // Set auto-update every 30 seconds (30000 ms)
-        if(autoUpdateInterval) clearInterval(autoUpdateInterval);
-        autoUpdateInterval = setInterval(fetchWeather, 30000);
-    };
+function getSkyColors(temp, hour) {
+  if (hour >= 6 && hour < 10)  return ['#3b1a00','#c05a1e','#e8935a'];
+  if (hour >= 10 && hour < 18) return ['#0d1b38','#1a3a6c','#2e6da4'];
+  if (hour >= 18 && hour < 21) return ['#2a0a38','#8c2a72','#d4725a'];
+  return ['#020408','#060d1f','#0d1b38'];
+}
+
+function updateSkyGradient(temp) {
+  const sky = document.getElementById('sky');
+  const h = new Date().getHours();
+  const [c1,c2,c3] = getSkyColors(temp, h);
+  sky.style.background = `linear-gradient(155deg, ${c1} 0%, ${c2} 55%, ${c3} 100%)`;
+}
+
+function degToCardinal(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+function drawRose(canvas, targetDeg, animated) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = 52;
+  isDark = detectDark();
+
+  ctx.clearRect(0, 0, W, H);
+
+  const bgColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const ringColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const tickColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)';
+  const labelColor = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+  const primaryLabel = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)';
+  const needleColor = '#378ADD';
+  const tailColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R + 14, 0, Math.PI * 2);
+  ctx.fillStyle = bgColor;
+  ctx.fill();
+
+  for (let ri = 1; ri <= 3; ri++) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, (R / 3) * ri, 0, Math.PI * 2);
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < 16; i++) {
+    const a = (i * Math.PI * 2) / 16 - Math.PI / 2;
+    const inner = i % 4 === 0 ? R - 10 : R - 5;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.strokeStyle = tickColor;
+    ctx.lineWidth = i % 4 === 0 ? 1 : 0.5;
+    ctx.stroke();
+  }
+
+  const cardinals = [['N',0],['E',90],['S',180],['O',270]];
+  ctx.font = '500 11px var(--font-sans, system-ui)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  cardinals.forEach(([lbl, deg]) => {
+    const a = (deg * Math.PI / 180) - Math.PI / 2;
+    const lx = cx + Math.cos(a) * (R + 10);
+    const ly = cy + Math.sin(a) * (R + 10);
+    ctx.fillStyle = primaryLabel;
+    ctx.fillText(lbl, lx, ly);
+  });
+
+  const needleAngle = (targetDeg * Math.PI / 180) - Math.PI / 2;
+  const tailAngle = needleAngle + Math.PI;
+
+  const tipX = cx + Math.cos(needleAngle) * (R - 6);
+  const tipY = cy + Math.sin(needleAngle) * (R - 6);
+  const tailX = cx + Math.cos(tailAngle) * 16;
+  const tailY = cy + Math.sin(tailAngle) * 16;
+
+  const perpX = Math.cos(needleAngle + Math.PI / 2);
+  const perpY = Math.sin(needleAngle + Math.PI / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(cx + perpX * 5, cy + perpY * 5);
+  ctx.lineTo(tailX, tailY);
+  ctx.lineTo(cx - perpX * 5, cy - perpY * 5);
+  ctx.closePath();
+  ctx.fillStyle = needleColor;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(tailX, tailY);
+  ctx.lineTo(cx + perpX * 4, cy + perpY * 4);
+  ctx.lineTo(cx - perpX * 4, cy - perpY * 4);
+  ctx.closePath();
+  ctx.fillStyle = tailColor;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? '#fff' : '#1a1a1a';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = needleColor;
+  ctx.fill();
+}
+
+function animateRose(canvas, fromDeg, toDeg, duration) {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  const start = performance.now();
+  const diff = ((toDeg - fromDeg + 540) % 360) - 180;
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+    const cur = fromDeg + diff * ease;
+    drawRose(canvas, cur, true);
+    if (t < 1) animFrame = requestAnimationFrame(step);
+    else { currentDir = toDeg; drawRose(canvas, toDeg, false); }
+  }
+  animFrame = requestAnimationFrame(step);
+}
+
+function getConditionLabel(temp, wind) {
+  if (wind > 60) return 'Stormy';
+  if (wind > 35) return 'Very Windy';
+  if (wind > 20) return 'Windy';
+  if (temp < 0) return 'Freezing';
+  if (temp < 8) return 'Cold';
+  if (temp < 16) return 'Cool';
+  if (temp < 24) return 'Mild';
+  if (temp < 30) return 'Warm';
+  return 'Hot';
+}
+
+async function fetchWeather() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  const btn = document.getElementById('fetchBtn');
+
+  btn.classList.add('loading');
+
+  try {
+    const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+    if (!res.ok) throw new Error('error');
+
+    const data = await res.json();
+
+    const temp = data.current_weather.temperature;
+    const wind = Math.round(data.current_weather.windspeed);
+    const dir = Number(data.current_weather.winddirection);
+
+    document.getElementById('bigTemp').textContent = `${Math.round(temp)}\u00B0`;
+
+    document.getElementById('speechTxt').textContent = data.speech || '';
+    document.getElementById('condLabel').textContent = getConditionLabel(temp, wind);
+
+    document.getElementById('locLabel').textContent =
+    `${Math.abs(lat).toFixed(2)}\u00B0${lat >= 0 ? 'N' : 'S'} ` +
+    `${Math.abs(lon).toFixed(2)}\u00B0${lon >= 0 ? 'E' : 'W'}`;
+
+    document.getElementById('wSpeed').textContent = wind;
+
+    document.getElementById('wDir').textContent = `${Math.round(dir)}\u00B0`;
+
+    document.getElementById('wCardinal').textContent = degToCardinal(dir);
+
+    document.getElementById('speedBar').style.width =
+      `${Math.min((wind / 120) * 100, 100)}%`;
+
+    updateSkyGradient(temp);
+
+    const roseCanvas = document.getElementById('roseCanvas');
+    animateRose(roseCanvas, currentDir, dir, 900);
+    currentDir = dir;
+
+    document.getElementById('windSection').style.display = 'flex';
+    document.getElementById('updateRow').style.display = 'flex';
+
+    document.getElementById('updateTime').textContent =
+      `Updated at ${new Date().toLocaleTimeString('fr-FR')} · auto 30s`;
+
+  } catch (e) {
+    console.error(e);
+    document.getElementById('speechTxt').textContent = 'Data unavailable.';
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+window.onload = () => {
+  const stars = document.getElementById('starsCanvas');
+  stars.width = stars.parentElement.offsetWidth || 420;
+  stars.height = 220;
+  drawStars(stars);
+
+  const roseCanvas = document.getElementById('roseCanvas');
+  drawRose(roseCanvas, 0, false);
+
+  fetchWeather();
+  if (autoInterval) clearInterval(autoInterval);
+  autoInterval = setInterval(fetchWeather, 30000);
+};
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  const roseCanvas = document.getElementById('roseCanvas');
+  drawRose(roseCanvas, currentDir, false);
+});
 </script>
-</body>
-</html>
