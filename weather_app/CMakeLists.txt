@@ -1,13 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
-project(WeatherApp LANGUAGES CXX)
+project(WeatherAppDrogon LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find required packages
-find_package(CURL REQUIRED)
-find_package(nlohmann_json REQUIRED)
+# Recherche de Drogon et de ses dépendances (JsonCpp, etc.)
+find_package(Drogon REQUIRED)
 
-add_executable(weather_app src/main.cpp)
-
-target_link_libraries(weather_app PRIVATE CURL::libcurl nlohmann_json::nlohmann_json)
+add_executable(drogon_weather src/main.cpp)
+target_link_libraries(drogon_weather PRIVATE Drogon::Drogon)

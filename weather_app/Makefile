@@ -11,7 +11,11 @@ build:
 clean:
 	rm -rf $(BUILD_DIR)
 
-run:
-	./$(BUILD_DIR)/weather_app
+# Nouvelle commande pour exécuter les tests Pytest
+test:
+	@echo "=== Lancement des tests d'intégration Pytest ==="
+	python3 -m venv tests/.venv
+	./tests/.venv/bin/pip install -r tests/requirements.txt
+	./tests/.venv/bin/pytest tests/ -v
 
-.PHONY: all configure build clean run
+.PHONY: all configure build clean test
