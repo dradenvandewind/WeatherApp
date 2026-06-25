@@ -13,6 +13,7 @@ RUN make configure && make build
 FROM ubuntu:24.04
 
 RUN apt-get update && apt-get install -y \
+    curl \
     libjsoncpp-dev \
     uuid-dev \
     libssl-dev \
@@ -30,6 +31,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 COPY --from=builder /build_context/build/drogon_weather .
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health/live || exit 1
 
 EXPOSE 8000
 CMD ["./drogon_weather"]

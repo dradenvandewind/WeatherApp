@@ -4,6 +4,50 @@
 using namespace drogon;
 
 int main() {
+        // ─── Health probes ────────────────────────────────────────────────────────
+ 
+    // Liveness: is the process responding? → Docker/K8s restarts if unhealthy
+    app().registerHandler("/health/live",
+        [](const HttpRequestPtr&,
+           std::function<void(const HttpResponsePtr&)>&& callback) {
+            auto res = HttpResponse::newHttpResponse();
+            res->setStatusCode(k200OK);
+            res->setContentTypeCode(CT_APPLICATION_JSON);
+            res->setBody(R"({"status":"ok"})");
+            callback(res);
+        },
+        {Get});
+
+    // Readiness: is the app ready to receive traffic?
+    // Here we verify that Open-Meteo is reachable (external dependency).
+    app().registerHandler("/health/ready",
+        [](const HttpRequestPtr&,
+           std::function<void(const HttpResponsePtr&)>&& callback) {
+ 
+            auto client = HttpClient::newHttpClient("https://api.open-meteo.com");
+            auto probe  = HttpRequest::newHttpRequest();
+            probe->setPath("/v1/forecast?latitude=48.8566&longitude=2.3522&current_weather=true");
+ 
+            client->sendRequest(probe,
+                [callback](ReqResult result, const HttpResponsePtr& response) {
+                    auto res = HttpResponse::newHttpResponse();
+                    res->setContentTypeCode(CT_APPLICATION_JSON);
+ 
+                    if (result != ReqResult::Ok || !response ||
+                        response->getStatusCode() != k200OK) {
+                        res->setStatusCode(k503ServiceUnavailable);
+                        res->setBody(R"({"status":"unavailable","reason":"open-meteo unreachable"})");
+                    } else {
+                        res->setStatusCode(k200OK);
+                        res->setBody(R"({"status":"ready"})");
+                    }
+                    callback(res);
+                });
+        },
+        {Get});
+
+
+
     // Register the /weather route
     app().registerHandler("/weather", [](const HttpRequestPtr& req, 
                                          std::function<void (const HttpResponsePtr &)> &&callback) {
