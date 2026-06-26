@@ -1,0 +1,22 @@
+scrape_configs:
+
+  - job_name: 'prometheus'
+    static_configs:
+        - targets: ['localhost:9090']
+
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # - job_name: "weather_backend"
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets: ["drogon-backend:8000"]
+
+  # - job_name: "weather_exporter"
+  #   static_configs:
+  #     - targets: ["weather-exporter:9101"]
