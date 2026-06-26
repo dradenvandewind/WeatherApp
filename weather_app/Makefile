@@ -10,12 +10,9 @@ build:
 
 clean:
 	rm -rf $(BUILD_DIR)
-
-# Nouvelle commande pour exécuter les tests Pytest
+	
+# Lance les tests via Docker Compose
 test:
-	@echo "=== Lancement des tests d'intégration Pytest ==="
-	python3 -m venv tests/.venv
-	./tests/.venv/bin/pip install -r tests/requirements.txt
-	./tests/.venv/bin/pytest tests/ -v
+	docker compose up --build integration-tests --exit-code-from integration-tests
 
 .PHONY: all configure build clean test
