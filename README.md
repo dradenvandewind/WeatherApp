@@ -91,12 +91,12 @@ Architecture logique (microservices)
 
 
 """
-Client / Browser
-        │
-        │ HTTP :8000
-        ▼
+				Client / Browser
+    		    │
+        		│ HTTP :8080
+        		▼
 ┌─────────────────────────────────────────────────────┐
-│              Drogon C++  ·  0.0.0.0:8000            │
+│              Drogon C++  ·  0.0.0.0:8080            │
 │                                                     │
 │                                                     │
 │                      Router                         │
@@ -216,9 +216,18 @@ curl "http://localhost:8080/api/weather?lat=48.39&lon=-4.48"
 # Api Documentation
 http://127.0.0.1:8080/docs
 
+# Monitoring Node App
+Open your browser,http://localhost:3000
+ log in using the credentials “admin:admin,” and skip the step to change the password to a new one
+
+ Select dashboard  http://localhost:3000/dashboards 
+
 
 #Test
 
 curl "http://localhost:8000/weather?lat=48.39&lon=-4.48"
 
 
+# Test auto
+$ cd weather_app 
+$ make test

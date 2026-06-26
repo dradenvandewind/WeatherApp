@@ -91,5 +91,19 @@ services:
         - /var/lib/docker/:/var/lib/docker:ro
       restart: unless-stopped
 
+  # =========================
+  # 🧪 INTEGRATION TESTS
+  # =========================
+  integration-tests:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.tests
+    container_name: weather_integration_tests
+    environment:
+      - BASE_URL=http://nginx-server:80/api  
+    depends_on:
+      nginx-server:
+        condition: service_started 
+
 volumes:
   grafana-data:

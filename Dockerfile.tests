@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY tests/requirements.txt ./tests/requirements.txt
+RUN pip install --no-cache-dir -r tests/requirements.txt
+
+
+COPY tests/ ./tests/
+
+# start pytest by default
+CMD ["pytest", "tests/", "-v"]
