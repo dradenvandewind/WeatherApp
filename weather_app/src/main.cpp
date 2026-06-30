@@ -95,7 +95,7 @@ int main() {
           }
         }
       }
-    },
+    }
     
   },
   "components": {
