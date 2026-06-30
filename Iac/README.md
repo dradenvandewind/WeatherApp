@@ -18,6 +18,17 @@ cd terraform
 terraform init
 terraform plan
 terraform apply
+
+
+# get terraform env
+
+terraform output app_url
+terraform output grafana_url
+terraform output openapi_url
+terraform output prometheus_url
+terraform output public_ip
+terraform output ssh_command
+
 ```
 This creates the VM and **automatically generates** `../ansible/inventory.ini` with the correct IP and SSH key (`weather-app-key.pem`).
 
@@ -43,4 +54,6 @@ terraform destroy
 ## Notes / items to adapt
 - `var.ssh_allowed_cidr` is open to `0.0.0.0/0` by default: restrict it to your IP in production.
 - `t3.medium` (4 GB RAM) is a comfortable minimum given the number of containers (Drogon, Nginx, Prometheus, Grafana, node-exporter, cAdvisor); adjust `var.instance_type` according to your workload.
+
+
 
