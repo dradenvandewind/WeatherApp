@@ -142,6 +142,7 @@ https://api.open-meteo.com/v1/forecast?latitude=48.11&longitude=-1.67&current_we
 
 ```text
 weather-app/
+├── Readme.md
 ├── docker-compose.yml
 ├── Dockerfile.tests
 ├── weather_app/
@@ -151,24 +152,35 @@ weather-app/
 │   └── src/
 │       └── main.cpp
 └── nginx/
-    ├── default.conf
-    ├── html/
-        └── index.html
+│    ├── default.conf
+│    ├── html/
+│        └── index.html
 └── grafana/   
-      ├── grafana/provisioning/datasources
-	  │								├── dashboards.yml
-	  │								├── node-exporter-full.json
-	  │								└── dashboard-container.json
-      │
-      └── grafana/provisioning/datasources/
-									└── datasource.yml
+│      ├── grafana/provisioning/datasources
+│	   │								├── dashboards.yml
+│	   │								├── node-exporter-full.json
+│	   │								└── dashboard-container.json
+│      │
+│      └── grafana/provisioning/datasources/
+│									└── datasource.yml
 └── monitoring/   
-      └── prometheus.yml
-      
+│      └── prometheus.yml
+│      
 └── tests/   
-      └── requirements.txt
-      └── test_weather.py
-      
+│      └── requirements.txt
+│      └── test_weather.py
+└── Iac/
+    └── terraform/
+	│     └──  main.tf
+	│	  └── providers.tf
+	│	  └── variables.tf
+	│	  └── outputs.tf
+    │
+    └── ansible
+	│      └── ansible.cfg
+	│	   └── playbook.yml
+	│	   └── templates
+    └── Readme.md  
       
 /
 ```
