@@ -1,0 +1,109 @@
+---
+- name: Deploy the weather-app stack (Drogon + Nginx + Prometheus + Grafana)
+  hosts: weather_app
+  become: true
+  vars:
+    app_dir: /opt/weather-app
+
+  tasks:
+    # =========================
+    # 🔧 System preparation
+    # =========================
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+        state: present
+
+    # =========================
+    # 🐳 Docker installation
+    # =========================
+    - name: Create apt keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add official Docker GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch={{ ansible_architecture if ansible_architecture != 'x86_64' else 'amd64' }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker Engine and compose plugin
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Add ubuntu to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+    - name: Ensure Docker is started and enabled
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # =========================
+    # 📂 Deploy application files
+    # =========================
+    - name: Create deployment directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Clone or update the WeatherApp repository (git pull)
+      git:
+        repo: "https://github.com/dradenvandewind/WeatherApp.git"
+        dest: "{{ app_dir }}"
+        version: "{{ git_branch | default('fullnative') }}"
+        force: true
+        update: true
+      become: true
+      become_user: ubuntu
+
+
+    # =========================
+    # 🚀 Launch the stack
+    # =========================
+    - name: Run docker compose (build + up -d)
+      command: docker compose up -d --build
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Check that containers are running
+      command: docker compose ps
+      args:
+        chdir: "{{ app_dir }}"
+      register: compose_ps
+      changed_when: false
+
+    - name: Display container status
+      debug:
+        var: compose_ps.stdout_lines
