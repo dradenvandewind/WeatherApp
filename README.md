@@ -261,3 +261,14 @@ curl "http://localhost:8000/weather?lat=48.39&lon=-4.48"
 $ cd weather_app 
 $ make test
 ```
+
+
+#Deploy weather app on aws 
+
+You must have an account to retrieve your login credentials and configure the access policy in order to use the platform.
+
+cd Iac
+Open Readme.md and follow some instructions
+
+
+
