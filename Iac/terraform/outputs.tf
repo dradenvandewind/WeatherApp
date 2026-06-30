@@ -23,6 +23,16 @@ output "prometheus_url" {
   value       = "http://${aws_instance.this.public_ip}:9090"
 }
 
+output "docs_url" {
+  description = "Documentation URL"
+  value       = "http://${aws_instance.this.public_ip}:8080/docs"
+}
+
+output "openapi_url" {
+  description = "OpenAPI Documentation URL"
+  value       = "http://${aws_instance.this.public_ip}:8080/openapi.json"
+}
+
 
 # Automatically generate the Ansible inventory with the created machine's IP
 resource "local_file" "ansible_inventory" {
