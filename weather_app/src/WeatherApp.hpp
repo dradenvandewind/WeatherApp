@@ -1,11 +1,15 @@
 #pragma once
+#include "IWeatherProvider.hpp"
 #include <drogon/drogon.h>
+#include <memory>
 #include <string>
 #include <functional>
 
 class WeatherApp {
 public:
-    WeatherApp();
+    // Injection de dependance : WeatherApp recoit un IWeatherProvider
+    // (OpenMeteoProvider en production, MockWeatherProvider en test).
+    explicit WeatherApp(std::unique_ptr<IWeatherProvider> provider);
     ~WeatherApp();
 
     WeatherApp(const WeatherApp&) = delete;
@@ -23,6 +27,9 @@ private:
     void handleReadiness(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
     void handleTests(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
     void handleWeather(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+
+    // Le fournisseur meteo n'est plus fige en dur : c'est une interface.
+    std::unique_ptr<IWeatherProvider> weatherProvider_;
 
     // static data / schemas
     static const std::string openApiSchema_;
