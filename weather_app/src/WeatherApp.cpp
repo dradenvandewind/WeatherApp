@@ -1,4 +1,5 @@
 #include "WeatherApp.hpp"
+#include "MockWeatherProvider.hpp"
 #include <iostream>
 
 // Initialization of static constants
@@ -94,7 +95,8 @@ const std::string WeatherApp::swaggerHtml_ = R"HTML(<!DOCTYPE html>
 </body>
 </html>)HTML";
 
-WeatherApp::WeatherApp() {
+WeatherApp::WeatherApp(std::unique_ptr<IWeatherProvider> provider)
+    : weatherProvider_(std::move(provider)) {
     LOG_INFO << "WeatherApp instance created.";
 }
 
@@ -164,18 +166,15 @@ void WeatherApp::handleLiveness(const drogon::HttpRequestPtr&, std::function<voi
 }
 
 void WeatherApp::handleReadiness(const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-    auto client = drogon::HttpClient::newHttpClient("https://api.open-meteo.com");
-    auto probe = drogon::HttpRequest::newHttpRequest();
-    probe->setPath("/v1/forecast?latitude=48.8566&longitude=2.3522&current_weather=true");
-
-    client->sendRequest(probe, [callback](drogon::ReqResult result, const drogon::HttpResponsePtr& response) {
+    // We no longer know Open-Meteo here: we go through the IWeatherProvider contract.
+    weatherProvider_->checkAvailability([callback](bool available) {
         auto res = drogon::HttpResponse::newHttpResponse();
         res->setContentTypeCode(drogon::CT_APPLICATION_JSON);
         res->addHeader("Access-Control-Allow-Origin", "*");
 
-        if (result != drogon::ReqResult::Ok || !response || response->getStatusCode() != drogon::k200OK) {
+        if (!available) {
             res->setStatusCode(drogon::k503ServiceUnavailable);
-            res->setBody(R"({"status":"unavailable","reason":"open-meteo unreachable"})");
+            res->setBody(R"({"status":"unavailable","reason":"weather provider unreachable"})");
         } else {
             res->setStatusCode(drogon::k200OK);
             res->setBody(R"({"status":"ready"})");
@@ -231,6 +230,24 @@ void WeatherApp::handleTests(const drogon::HttpRequestPtr&, std::function<void(c
         if (lon.empty()) lon = "2.3522";
         (lat == saved_lat && lon == saved_lon) ? ok("custom_lat_lon_preserved", "lat=" + lat + " lon=" + lon) : ko("custom_lat_lon_preserved", "overwritten!");
     }
+    {
+        // Real integration-like test, without network: thanks to the IWeatherProvider interface,
+        // we can invoke exactly the same logic as /weather with a mock.
+        MockWeatherProvider mockProvider;
+        mockProvider.fetchCurrentWeather("43.2965", "5.3698",
+            [&](bool success, const Json::Value& result) {
+                bool valid = success
+                    && result["current_weather"]["temperature"].asDouble() == 18.5
+                    && result["_mock_lat"].asString() == "43.2965";
+                valid ? ok("mock_provider_fetch") : ko("mock_provider_fetch", "unexpected mock result");
+            });
+    }
+    {
+        MockWeatherProvider mockProvider;
+        mockProvider.checkAvailability([&](bool available) {
+            available ? ok("mock_provider_availability") : ko("mock_provider_availability", "mock reported unavailable");
+        });
+    }
 
     report["total"] = passed + failed;
     report["passed"] = passed;
@@ -251,39 +268,27 @@ void WeatherApp::handleWeather(const drogon::HttpRequestPtr& req, std::function<
     if (lat.empty()) lat = "48.8566";
     if (lon.empty()) lon = "2.3522";
 
-    auto client = drogon::HttpClient::newHttpClient("https://api.open-meteo.com");
-    std::string path = "/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current_weather=true";
-    auto apiReq = drogon::HttpRequest::newHttpRequest();
-    apiReq->setPath(path);
-
-    client->sendRequest(apiReq, [callback](drogon::ReqResult result, const drogon::HttpResponsePtr& response) {
-        auto res = drogon::HttpResponse::newHttpResponse();
-        res->addHeader("Access-Control-Allow-Origin", "*");
-
-        if (result != drogon::ReqResult::Ok || !response) {
-            res->setStatusCode(drogon::k500InternalServerError);
-            res->setBody(R"({"error":"Failed to connect to Open-Meteo"})");
+    // WeatherApp no longer knows WHO provides the weather (Open-Meteo, mock, another API...),
+    // only WHAT to ask for: that's the whole point of the interface.
+    weatherProvider_->fetchCurrentWeather(lat, lon,
+        [callback](bool success, const Json::Value& jsonResult) {
+            auto res = drogon::HttpResponse::newHttpResponse();
+            res->addHeader("Access-Control-Allow-Origin", "*");
             res->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+
+            if (!success) {
+                res->setStatusCode(drogon::k500InternalServerError);
+                res->setBody(R"({"error":"Failed to fetch weather data"})");
+                callback(res);
+                return;
+            }
+
+            Json::Value root;
+            root["speech"] = "Refreshes real-time data via the native Drogon framework .";
+            root["current_weather"] = jsonResult["current_weather"];
+
+            res->setStatusCode(drogon::k200OK);
+            res->setBody(root.toStyledString());
             callback(res);
-            return;
-        }
-
-        auto jsonPtr = response->getJsonObject();
-        if (!jsonPtr) {
-            res->setStatusCode(drogon::k500InternalServerError);
-            res->setBody(R"({"error":"External API JSON parsing error"})");
-            res->setContentTypeCode(drogon::CT_APPLICATION_JSON);
-            callback(res);
-            return;
-        }
-
-        Json::Value root;
-        root["speech"] = "Refreshes real-time data via the native Drogon framework .";
-        root["current_weather"] = (*jsonPtr)["current_weather"];
-
-        res->setStatusCode(drogon::k200OK);
-        res->setBody(root.toStyledString());
-        res->setContentTypeCode(drogon::CT_APPLICATION_JSON);
-        callback(res);
-    });
+        });
 }
